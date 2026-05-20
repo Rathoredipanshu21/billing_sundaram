@@ -176,7 +176,7 @@ if (!isset($_SESSION['admin'])) {
 
         <nav class="flex-grow overflow-y-auto px-1 py-4 custom-scroll">
             
-            <a href="dashboard_salon.php" class="nav-link active mb-4" id="dashboard-root" target="content-frame">
+            <a href="dashboard.php" class="nav-link active mb-4" id="dashboard-root" target="content-frame">
                 <i class="fa-solid fa-chart-pie w-5 text-sm"></i>
                 <span class="sidebar-brand-text ml-1">Terminal Dashboard</span>
             </a>
@@ -249,12 +249,21 @@ if (!isset($_SESSION['admin'])) {
                         <i class="fa-solid fa-percent w-4 mr-2"></i>Commission Split
                     </a>
                 </div>
+               
             </div>
 
             <div class="section-label sidebar-brand-text">System Settings</div>
+            <a href="expenses.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
+                <i class="fa-solid fa-wallet w-5"></i>
+                <span class="sidebar-brand-text ml-1">Expenses</span>
+            </a>
+            <a href="customers.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
+                <i class="fa-solid fa-users w-5"></i>
+                <span class="sidebar-brand-text ml-1">Customers</span>
+            </a>
             <a href="security_settings.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
                 <i class="fa-solid fa-gears w-5"></i>
-                <span class="sidebar-brand-text ml-1">Operator Profile</span>
+                <span class="sidebar-brand-text ml-1">Security Settings</span>
             </a>
         </nav>
 
@@ -272,7 +281,7 @@ if (!isset($_SESSION['admin'])) {
     <div class="flex-1 flex flex-col min-w-0 bg-white" data-aos="fade-in" data-aos-duration="800">
         <main class="flex-1 p-3 bg-gray-50/50">
             <div class="w-full h-full rounded-2xl overflow-hidden main-workspace shadow-sm bg-white">
-                <iframe id="content-frame" name="content-frame" src="dashboard_salon.php" class="w-full h-full border-0"></iframe>
+                <iframe id="content-frame" name="content-frame" src="dashboard.php" class="w-full h-full border-0"></iframe>
             </div>
         </main>
     </div>
