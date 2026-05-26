@@ -13,7 +13,7 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
     <title>Settled Bills & Invoice History</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <style>
         body {
@@ -21,28 +21,28 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
             background-color: #FFFFFF;
             color: #222222;
         }
-        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
     </style>
 </head>
-<body class="p-4 lg:p-6 min-h-screen">
+<body class="p-4 lg:p-8 min-h-screen">
 
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-4 border-b border-gray-100" data-aos="fade-down" data-aos-duration="600">
         <div>
-            <h2 class="text-base font-medium text-neutral-800 tracking-tight flex items-center gap-2">
+            <h2 class="text-xl font-bold text-neutral-800 tracking-tight flex items-center gap-2">
                 <i class="fa-solid fa-list-check text-amber-500"></i>
                 <span>Settled Bills & History</span>
             </h2>
-            <p class="text-[11px] text-gray-400 uppercase tracking-wider mt-0.5">Review past transactions and generate reprints</p>
+            <p class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-medium">Review past transactions and generate reprints</p>
         </div>
         
         <div class="flex items-center gap-3">
             <div class="relative">
-                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-magnifying-glass text-sm"></i></span>
                 <input type="text" id="searchInput" onkeyup="filterLedger()" placeholder="Search Invoice or Client..." 
-                    class="bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-4 py-2 text-xs text-neutral-800 outline-none focus:border-[#EBBB15] focus:ring-2 focus:ring-[#EBBB15]/20 transition-all w-64">
+                    class="bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm font-medium text-neutral-800 outline-none focus:border-[#EBBB15] focus:ring-2 focus:ring-[#EBBB15]/20 transition-all w-72">
             </div>
-            <button onclick="window.print()" class="bg-[#222222] hover:bg-neutral-800 text-[#EBBB15] px-4 py-2 rounded-xl text-xs font-medium transition flex items-center gap-2 shadow-sm">
+            <button onclick="window.print()" class="bg-[#222222] hover:bg-neutral-800 text-[#EBBB15] px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm">
                 <i class="fa-solid fa-file-export"></i>
                 <span>Export Ledger</span>
             </button>
@@ -54,29 +54,30 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
             <table class="w-full text-left border-collapse" id="historyTable">
                 <thead>
                     <tr class="bg-gray-50/70 border-b border-gray-100">
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500">Invoice Ref</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500">Timestamp</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500">Client Profile</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500">Clearance Mode</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 text-right">Gross Value</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 text-right">Discount</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 text-right">Net Settled</th>
-                        <th class="px-5 py-4 text-[11px] font-medium uppercase tracking-wider text-gray-500 text-center">Controls</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Invoice Ref</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Timestamp</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Client Profile</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500">Clearance Mode</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Gross Value</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Discount</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">GST</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-right">Net Settled</th>
+                        <th class="px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-500 text-center">Controls</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 text-xs text-neutral-700">
+                <tbody class="divide-y divide-gray-100 text-sm text-neutral-700">
                     <?php if ($invoiceResult && $invoiceResult->num_rows > 0): ?>
                         <?php while($row = $invoiceResult->fetch_assoc()): ?>
                             <tr class="hover:bg-gray-50/50 transition">
-                                <td class="px-5 py-4 font-mono text-[11px] font-medium text-neutral-800">
+                                <td class="px-5 py-4 font-mono text-sm font-semibold text-neutral-800">
                                     <?php echo htmlspecialchars($row['invoice_no']); ?>
                                 </td>
-                                <td class="px-5 py-4 text-gray-500">
+                                <td class="px-5 py-4 font-medium text-gray-600">
                                     <?php echo date('d M Y, h:i A', strtotime($row['created_at'])); ?>
                                 </td>
                                 <td class="px-5 py-4">
-                                    <div class="font-medium text-neutral-800"><?php echo htmlspecialchars($row['customer_name']); ?></div>
-                                    <div class="text-[10px] text-gray-400 font-mono mt-0.5"><?php echo htmlspecialchars($row['customer_mobile']); ?></div>
+                                    <div class="font-bold text-neutral-800 text-sm"><?php echo htmlspecialchars($row['customer_name']); ?></div>
+                                    <div class="text-xs text-gray-500 font-mono mt-0.5"><?php echo htmlspecialchars($row['customer_mobile']); ?></div>
                                 </td>
                                 <td class="px-5 py-4">
                                     <?php 
@@ -87,37 +88,63 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
                                         if($mode === 'Cash') { $badgeColor = 'bg-emerald-50 text-emerald-700 border border-emerald-100'; $icon = 'fa-money-bill-wave'; }
                                         if($mode === 'UPI') { $badgeColor = 'bg-indigo-50 text-indigo-700 border border-indigo-100'; $icon = 'fa-qrcode'; }
                                         if($mode === 'Card') { $badgeColor = 'bg-blue-50 text-blue-700 border border-blue-100'; $icon = 'fa-credit-card'; }
+                                        if($mode === 'Split') { $badgeColor = 'bg-amber-50 text-amber-700 border border-amber-100'; $icon = 'fa-layer-group'; }
                                     ?>
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-medium uppercase <?php echo $badgeColor; ?>">
-                                        <i class="fa-solid <?php echo $icon; ?>"></i>
-                                        <?php echo htmlspecialchars($mode); ?>
-                                    </span>
+                                    <div class="flex flex-col items-start gap-1.5">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase <?php echo $badgeColor; ?>">
+                                            <i class="fa-solid <?php echo $icon; ?>"></i>
+                                            <?php echo htmlspecialchars($mode); ?>
+                                        </span>
+                                        <?php if ($mode === 'Split'): ?>
+                                            <div class="text-xs text-gray-600 font-mono leading-relaxed mt-1">
+                                                <?php 
+                                                $splits = [];
+                                                if ($row['split_cash'] > 0) $splits[] = "Cash: ₹".number_format($row['split_cash'], 2);
+                                                if ($row['split_upi'] > 0) $splits[] = "UPI: ₹".number_format($row['split_upi'], 2);
+                                                if ($row['split_card'] > 0) $splits[] = "Card: ₹".number_format($row['split_card'], 2);
+                                                echo implode('<br>', $splits);
+                                                ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
-                                <td class="px-5 py-4 text-right text-gray-500 font-mono">
+                                <td class="px-5 py-4 text-right text-gray-600 font-mono font-medium">
                                     ₹<?php echo number_format($row['total_amount'], 2); ?>
                                 </td>
-                                <td class="px-5 py-4 text-right text-rose-500 font-mono">
-                                    <?php echo $row['discount_percent'] > 0 ? $row['discount_percent'] . '%' : '-'; ?> 
-                                    <span class="text-[10px] text-gray-400">(₹<?php echo number_format($row['discount'], 2); ?>)</span>
+                                <td class="px-5 py-4 text-right font-mono">
+                                    <?php if ($row['discount_percent'] > 0 || $row['discount'] > 0): ?>
+                                        <div class="text-rose-500 font-semibold"><?php echo floatval($row['discount_percent']); ?>%</div>
+                                        <div class="text-xs text-gray-400 mt-0.5">-₹<?php echo number_format($row['discount'], 2); ?></div>
+                                    <?php else: ?>
+                                        <span class="text-gray-400">-</span>
+                                    <?php endif; ?>
                                 </td>
-                                <td class="px-5 py-4 text-right font-mono font-semibold text-neutral-800">
+                                <td class="px-5 py-4 text-right font-mono">
+                                    <?php if ($row['gst_enabled'] == 1 && $row['gst_amount'] > 0): ?>
+                                        <div class="text-emerald-600 font-semibold">+₹<?php echo number_format($row['gst_amount'], 2); ?></div>
+                                        <div class="text-xs text-gray-400 mt-0.5">(<?php echo floatval($row['gst_percent']); ?>%)</div>
+                                    <?php else: ?>
+                                        <span class="text-gray-400">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="px-5 py-4 text-right font-mono font-bold text-neutral-900 text-base">
                                     ₹<?php echo number_format($row['net_payable'], 2); ?>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <button onclick="window.open('print_invoice.php?id=<?php echo $row['id']; ?>', '_blank')" class="w-8 h-8 rounded-lg bg-gray-50 border border-gray-200 text-gray-400 hover:text-[#EBBB15] hover:border-[#EBBB15] hover:bg-[#FFFDF5] transition flex items-center justify-center mx-auto shadow-sm" title="Print Receipt">
-                                        <i class="fa-solid fa-print text-xs"></i>
+                                    <button onclick="window.open('print_invoice.php?id=<?php echo $row['id']; ?>', '_blank')" class="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#EBBB15] hover:border-[#EBBB15] hover:bg-[#FFFDF5] transition flex items-center justify-center mx-auto shadow-sm" title="Print Receipt">
+                                        <i class="fa-solid fa-print text-sm"></i>
                                     </button>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="py-16 text-center bg-gray-50/30 border-none">
-                                <div class="w-12 h-12 rounded-xl bg-white border border-gray-100 text-gray-300 flex items-center justify-center mb-3 mx-auto shadow-sm">
-                                    <i class="fa-solid fa-receipt text-lg"></i>
+                            <td colspan="9" class="py-20 text-center bg-gray-50/30 border-none">
+                                <div class="w-14 h-14 rounded-2xl bg-white border border-gray-200 text-gray-400 flex items-center justify-center mb-4 mx-auto shadow-sm">
+                                    <i class="fa-solid fa-receipt text-xl"></i>
                                 </div>
-                                <h4 class="text-xs font-medium text-neutral-600 uppercase tracking-wider">No Settled Bills Found</h4>
-                                <p class="text-[11px] text-gray-400 mt-1 max-w-sm mx-auto leading-relaxed">Transactions generated from the Counter Desk will be permanently logged in this history matrix for auditing.</p>
+                                <h4 class="text-sm font-bold text-neutral-700 uppercase tracking-wider">No Settled Bills Found</h4>
+                                <p class="text-xs text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">Transactions generated from the Counter Desk will be permanently logged in this history matrix for auditing.</p>
                             </td>
                         </tr>
                     <?php endif; ?>

@@ -2,127 +2,464 @@
 session_start();
 include '../config/db.php';
 
+date_default_timezone_set('Asia/Kolkata');
+
 /*
 |--------------------------------------------------------------------------
-| TOTAL STATS
+| FILTER LOGIC
 |--------------------------------------------------------------------------
 */
 
-$totalInvoices = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices"))['total'];
-$totalRevenue = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(net_payable),0) as total FROM invoices"))['total'];
-$totalExpense = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(amount),0) as total FROM expenses"))['total'];
+$filter = $_GET['filter'] ?? 'today';
+
+$whereInvoice = "";
+$whereExpense = "";
+$whereSubscription = "";
+$whereCustomer = "";
+$whereService = "";
+
+switch($filter){
+
+    case 'yesterday':
+        $whereInvoice = "DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+        $whereExpense = "DATE(expense_date)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+        $whereSubscription = "DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+        break;
+
+    case 'week':
+        $whereInvoice = "YEARWEEK(created_at,1)=YEARWEEK(CURDATE(),1)";
+        $whereExpense = "YEARWEEK(expense_date,1)=YEARWEEK(CURDATE(),1)";
+        $whereSubscription = "YEARWEEK(created_at,1)=YEARWEEK(CURDATE(),1)";
+        break;
+
+    case 'month':
+        $whereInvoice = "MONTH(created_at)=MONTH(CURDATE()) AND YEAR(created_at)=YEAR(CURDATE())";
+        $whereExpense = "MONTH(expense_date)=MONTH(CURDATE()) AND YEAR(expense_date)=YEAR(CURDATE())";
+        $whereSubscription = "MONTH(created_at)=MONTH(CURDATE()) AND YEAR(created_at)=YEAR(CURDATE())";
+        break;
+
+    case 'year':
+        $whereInvoice = "YEAR(created_at)=YEAR(CURDATE())";
+        $whereExpense = "YEAR(expense_date)=YEAR(CURDATE())";
+        $whereSubscription = "YEAR(created_at)=YEAR(CURDATE())";
+        break;
+
+    default:
+        $whereInvoice = "DATE(created_at)=CURDATE()";
+        $whereExpense = "DATE(expense_date)=CURDATE()";
+        $whereSubscription = "DATE(created_at)=CURDATE()";
+        break;
+}
+
+/*
+|--------------------------------------------------------------------------
+| MAIN STATS
+|--------------------------------------------------------------------------
+*/
+
+$totalInvoices = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM invoices WHERE $whereInvoice"))['total'];
+
+$totalRevenue = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COALESCE(SUM(net_payable),0) as total FROM invoices WHERE $whereInvoice"))['total'];
+
+$totalExpense = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE $whereExpense"))['total'];
+
 $totalProfit = $totalRevenue - $totalExpense;
-$totalProducts = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM products"))['total'];
-$totalServices = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM services"))['total'];
-$totalStylists = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM stylists WHERE status='Active'"))['total'];
-$totalCategories = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM categories"))['total'];
-$totalCommission = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(commission_amount),0) as total FROM stylist_commissions"))['total'];
 
-/* Charts Data */
-$salesChartQuery = mysqli_query($conn, "SELECT MONTHNAME(created_at) as month_name, SUM(net_payable) as total FROM invoices GROUP BY MONTH(created_at)");
-$salesLabels = []; $salesData = [];
-while($s = mysqli_fetch_assoc($salesChartQuery)) { $salesLabels[] = $s['month_name']; $salesData[] = $s['total']; }
+$totalSubscriptions = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM client_subscriptions WHERE $whereSubscription"))['total'];
 
-$expenseChartQuery = mysqli_query($conn, "SELECT category, SUM(amount) as total FROM expenses GROUP BY category");
-$expenseLabels = []; $expenseData = [];
-while($e = mysqli_fetch_assoc($expenseChartQuery)) { $expenseLabels[] = $e['category']; $expenseData[] = $e['total']; }
+$totalCustomers = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(DISTINCT customer_mobile) as total FROM invoices WHERE $whereInvoice"))['total'];
 
-$topStylistsQuery = mysqli_query($conn, "SELECT s.stylist_name, COUNT(sc.id) as total_services, COALESCE(SUM(sc.commission_amount),0) as total_commission FROM stylists s LEFT JOIN stylist_commissions sc ON s.id = sc.stylist_id GROUP BY s.id ORDER BY total_commission DESC LIMIT 5");
-$recentInvoicesQuery = mysqli_query($conn, "SELECT * FROM invoices ORDER BY id DESC LIMIT 10");
+$totalServices = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM services"))['total'];
+
+$totalProducts = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM products"))['total'];
+
+$totalStylists = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM stylists WHERE status='Active'"))['total'];
+
+$totalCoupons = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM coupons"))['total'];
+
+$totalCategories = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COUNT(*) as total FROM categories"))['total'];
+
+$totalLoyalty = mysqli_fetch_assoc(mysqli_query($conn,"SELECT COALESCE(SUM(total_points),0) as total FROM customer_loyalty"))['total'];
+
+/*
+|--------------------------------------------------------------------------
+| SALES GRAPH
+|--------------------------------------------------------------------------
+*/
+
+$salesLabels = [];
+$salesData = [];
+
+$graphQuery = mysqli_query($conn,"
+SELECT DATE(created_at) as sale_date,
+SUM(net_payable) as total
+FROM invoices
+GROUP BY DATE(created_at)
+ORDER BY DATE(created_at) ASC
+");
+
+while($g = mysqli_fetch_assoc($graphQuery)){
+    $salesLabels[] = date('d M',strtotime($g['sale_date']));
+    $salesData[] = $g['total'];
+}
+
+/*
+|--------------------------------------------------------------------------
+| EXPENSE GRAPH
+|--------------------------------------------------------------------------
+*/
+
+$expenseLabels = [];
+$expenseData = [];
+
+$expenseQuery = mysqli_query($conn,"
+SELECT category,
+SUM(amount) as total
+FROM expenses
+GROUP BY category
+");
+
+while($e = mysqli_fetch_assoc($expenseQuery)){
+    $expenseLabels[] = $e['category'];
+    $expenseData[] = $e['total'];
+}
+
+/*
+|--------------------------------------------------------------------------
+| TOP SERVICES
+|--------------------------------------------------------------------------
+*/
+
+$topServices = mysqli_query($conn,"
+SELECT s.service_name,
+COUNT(ii.id) as total_bookings,
+SUM(ii.subtotal) as total_sales
+FROM invoice_items ii
+LEFT JOIN services s ON ii.item_id=s.id
+WHERE ii.item_type='service'
+GROUP BY ii.item_id
+ORDER BY total_sales DESC
+LIMIT 5
+");
+
+/*
+|--------------------------------------------------------------------------
+| TOP STYLISTS
+|--------------------------------------------------------------------------
+*/
+
+$topStylists = mysqli_query($conn,"
+SELECT stylist_name,
+specialty,
+commission_rate
+FROM stylists
+ORDER BY commission_rate DESC
+LIMIT 5
+");
+
+/*
+|--------------------------------------------------------------------------
+| RECENT INVOICES
+|--------------------------------------------------------------------------
+*/
+
+$recentInvoices = mysqli_query($conn,"
+SELECT *
+FROM invoices
+ORDER BY id DESC
+LIMIT 10
+");
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Salon Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css"/>
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #f4f4f4; }
-        .dashboard-card { background: white; border: 1px solid #e5e7eb; box-shadow: 0 5px 15px rgba(0,0,0,0.03); }
-        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
-    </style>
-</head>
-<body class="p-4 md:p-5">
 
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8" data-aos="fade-down">
-    <div>
-        <h1 class="text-3xl font-black uppercase tracking-wide text-[#1f1f1f]">Salon Dashboard</h1>
-        <p class="text-gray-500 text-sm mt-1">Business Analytics & Performance Overview</p>
-    </div>
-    <div class="bg-[#1f1f1f] text-yellow-400 px-6 py-4 rounded-3xl shadow-2xl">
-        <div class="text-[10px] uppercase tracking-widest">Sundaram Salon</div>
-        <div class="text-lg font-bold">Admin Dashboard</div>
-    </div>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Salon Professional Dashboard</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+
+body{
+    font-family: sans-serif;
+    background:#f5f7fb;
+}
+
+.card{
+    background:white;
+    border-radius:20px;
+    padding:20px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.05);
+}
+
+</style>
+
+</head>
+
+<body class="p-4 md:p-6">
+
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+
+<div>
+<h1 class="text-3xl font-black">Salon Dashboard</h1>
+<p class="text-gray-500 text-sm">Professional Business Analytics</p>
 </div>
+
+<form method="GET">
+
+<select name="filter"
+onchange="this.form.submit()"
+class="border rounded-xl px-4 py-3 font-semibold">
+
+<option value="today" <?= $filter=='today'?'selected':'' ?>>Today</option>
+<option value="yesterday" <?= $filter=='yesterday'?'selected':'' ?>>Yesterday</option>
+<option value="week" <?= $filter=='week'?'selected':'' ?>>This Week</option>
+<option value="month" <?= $filter=='month'?'selected':'' ?>>This Month</option>
+<option value="year" <?= $filter=='year'?'selected':'' ?>>This Year</option>
+
+</select>
+
+</form>
+
+</div>
+
+<!-- MAIN STATS -->
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <?php 
-    $cards = [
-        ['Revenue', '₹'.number_format($totalRevenue,0), 'fa-wallet', 'yellow', 'bg-black text-yellow-400'],
-        ['Expense', '₹'.number_format($totalExpense,0), 'fa-money-bill-wave', 'red', 'bg-red-500 text-white'],
-        ['Profit', '₹'.number_format($totalProfit,0), 'fa-chart-line', 'green', 'bg-green-500 text-white'],
-        ['Invoices', $totalInvoices, 'fa-file-invoice', 'yellow', 'bg-yellow-400 text-black']
-    ];
-    foreach($cards as $c): ?>
-    <div class="dashboard-card rounded-2xl p-4 <?php echo $c[4]; ?>" data-aos="zoom-in">
-        <div class="flex justify-between items-center">
-            <div>
-                <div class="text-[9px] uppercase tracking-widest opacity-80"><?php echo $c[0]; ?></div>
-                <div class="text-lg font-black mt-1"><?php echo $c[1]; ?></div>
-            </div>
-            <i class="fa-solid <?php echo $c[2]; ?> text-lg opacity-50"></i>
-        </div>
-    </div>
-    <?php endforeach; ?>
+
+<?php
+
+$stats = [
+
+['Revenue','₹'.number_format($totalRevenue),'fa-wallet','bg-black text-yellow-400'],
+['Profit','₹'.number_format($totalProfit),'fa-chart-line','bg-green-500 text-white'],
+['Expense','₹'.number_format($totalExpense),'fa-money-bill-wave','bg-red-500 text-white'],
+['Invoices',$totalInvoices,'fa-file-invoice','bg-blue-500 text-white'],
+
+['Subscriptions',$totalSubscriptions,'fa-id-card','bg-purple-500 text-white'],
+['Customers',$totalCustomers,'fa-users','bg-pink-500 text-white'],
+['Services',$totalServices,'fa-scissors','bg-indigo-500 text-white'],
+['Products',$totalProducts,'fa-box','bg-orange-500 text-white'],
+
+['Stylists',$totalStylists,'fa-user','bg-gray-800 text-white'],
+['Coupons',$totalCoupons,'fa-ticket','bg-teal-500 text-white'],
+['Categories',$totalCategories,'fa-layer-group','bg-cyan-500 text-white'],
+['Loyalty Points',$totalLoyalty,'fa-gift','bg-yellow-500 text-black']
+
+];
+
+foreach($stats as $s):
+
+?>
+
+<div class="card <?= $s[3] ?>">
+
+<div class="flex justify-between items-center">
+
+<div>
+
+<div class="uppercase text-[10px] tracking-widest opacity-80">
+<?= $s[0] ?>
 </div>
 
-<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-    <?php
-    $stats = [['Products',$totalProducts,'fa-box','blue'],['Services',$totalServices,'fa-scissors','green'],['Stylists',$totalStylists,'fa-user','yellow'],['Categories',$totalCategories,'fa-layer-group','purple'],['Comm.',"₹".number_format($totalCommission,0),'fa-coins','red']];
-    foreach($stats as $stat): ?>
-    <div class="dashboard-card rounded-2xl p-4 flex items-center justify-between" data-aos="fade-up">
-        <div>
-            <div class="text-gray-400 uppercase tracking-widest text-[9px]"><?php echo $stat[0]; ?></div>
-            <div class="text-md font-black text-[#1f1f1f]"><?php echo $stat[1]; ?></div>
-        </div>
-        <i class="fa-solid <?php echo $stat[2]; ?> text-<?php echo $stat[3]; ?>-500 text-md"></i>
-    </div>
-    <?php endforeach; ?>
+<div class="text-2xl font-black mt-2">
+<?= $s[1] ?>
 </div>
 
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-    <div class="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="dashboard-card rounded-3xl p-5" data-aos="fade-right"><h2 class="text-xs font-bold mb-4 uppercase">Monthly Revenue</h2><canvas id="salesChart" class="max-h-[200px]"></canvas></div>
-        <div class="dashboard-card rounded-3xl p-5" data-aos="fade-left"><h2 class="text-xs font-bold mb-4 uppercase">Expense Dist.</h2><canvas id="expenseChart" class="max-h-[200px]"></canvas></div>
-    </div>
-    <div class="dashboard-card rounded-3xl p-6" data-aos="fade-up">
-        <h2 class="text-sm font-bold mb-4">Top Stylists</h2>
-        <div class="space-y-3">
-            <?php while($stylist = mysqli_fetch_assoc($topStylistsQuery)): ?>
-            <div class="flex justify-between items-center border-b pb-2">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-black text-yellow-400 flex items-center justify-center font-bold text-[10px]"><?php echo strtoupper(substr($stylist['stylist_name'],0,1)); ?></div>
-                    <div><div class="font-bold text-xs"><?php echo $stylist['stylist_name']; ?></div></div>
-                </div>
-                <div class="font-bold text-yellow-600 text-xs">₹<?php echo number_format($stylist['total_commission'],0); ?></div>
-            </div>
-            <?php endwhile; ?>
-        </div>
-    </div>
 </div>
 
-<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<i class="fa-solid <?= $s[2] ?> text-3xl opacity-40"></i>
+
+</div>
+
+</div>
+
+<?php endforeach; ?>
+
+</div>
+
+<!-- CHARTS -->
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+<div class="card">
+<h2 class="font-bold mb-4">Sales Analytics</h2>
+<canvas id="salesChart"></canvas>
+</div>
+
+<div class="card">
+<h2 class="font-bold mb-4">Expense Analytics</h2>
+<canvas id="expenseChart"></canvas>
+</div>
+
+</div>
+
+<!-- TOP SERVICES & STYLISTS -->
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+<div class="card">
+
+<h2 class="font-bold mb-4">Top Services</h2>
+
+<div class="space-y-4">
+
+<?php while($service=mysqli_fetch_assoc($topServices)): ?>
+
+<div class="flex justify-between items-center border-b pb-3">
+
+<div>
+<div class="font-bold"><?= $service['service_name'] ?></div>
+<div class="text-sm text-gray-500">
+<?= $service['total_bookings'] ?> Bookings
+</div>
+</div>
+
+<div class="font-black text-green-600">
+₹<?= number_format($service['total_sales']) ?>
+</div>
+
+</div>
+
+<?php endwhile; ?>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2 class="font-bold mb-4">Top Stylists</h2>
+
+<div class="space-y-4">
+
+<?php while($stylist=mysqli_fetch_assoc($topStylists)): ?>
+
+<div class="flex justify-between items-center border-b pb-3">
+
+<div>
+<div class="font-bold"><?= $stylist['stylist_name'] ?></div>
+<div class="text-sm text-gray-500">
+<?= $stylist['specialty'] ?>
+</div>
+</div>
+
+<div class="font-black text-blue-600">
+<?= $stylist['commission_rate'] ?>%
+</div>
+
+</div>
+
+<?php endwhile; ?>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- RECENT INVOICES -->
+
+<div class="card overflow-auto">
+
+<div class="flex justify-between items-center mb-4">
+
+<h2 class="font-bold">Recent Invoices</h2>
+
+</div>
+
+<table class="w-full">
+
+<thead>
+
+<tr class="border-b">
+
+<th class="text-left py-3">Invoice</th>
+<th class="text-left py-3">Customer</th>
+<th class="text-left py-3">Payment</th>
+<th class="text-left py-3">Amount</th>
+<th class="text-left py-3">Date</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<?php while($invoice=mysqli_fetch_assoc($recentInvoices)): ?>
+
+<tr class="border-b hover:bg-gray-50">
+
+<td class="py-3 font-bold">
+<?= $invoice['invoice_no'] ?>
+</td>
+
+<td>
+<?= $invoice['customer_name'] ?>
+</td>
+
+<td>
+<?= $invoice['payment_mode'] ?>
+</td>
+
+<td class="font-bold text-green-600">
+₹<?= number_format($invoice['net_payable']) ?>
+</td>
+
+<td>
+<?= date('d M Y',strtotime($invoice['created_at'])) ?>
+</td>
+
+</tr>
+
+<?php endwhile; ?>
+
+</tbody>
+
+</table>
+
+</div>
+
 <script>
-    AOS.init({ duration:700, once:true });
-    new Chart(document.getElementById('salesChart'), { type:'bar', data: { labels: <?php echo json_encode($salesLabels); ?>, datasets:[{ data: <?php echo json_encode($salesData); ?>, backgroundColor:'#facc15', borderRadius:8 }] }, options:{ responsive:true, maintainAspectRatio:false } });
-    new Chart(document.getElementById('expenseChart'), { type:'doughnut', data: { labels: <?php echo json_encode($expenseLabels); ?>, datasets:[{ data: <?php echo json_encode($expenseData); ?>, backgroundColor:['#facc15','#ef4444','#22c55e','#3b82f6','#8b5cf6'] }] }, options:{ responsive:true, maintainAspectRatio:false } });
+
+new Chart(document.getElementById('salesChart'),{
+
+type:'line',
+
+data:{
+labels:<?= json_encode($salesLabels) ?>,
+datasets:[{
+label:'Sales',
+data:<?= json_encode($salesData) ?>,
+fill:true,
+tension:0.4
+}]
+}
+
+});
+
+new Chart(document.getElementById('expenseChart'),{
+
+type:'doughnut',
+
+data:{
+labels:<?= json_encode($expenseLabels) ?>,
+datasets:[{
+data:<?= json_encode($expenseData) ?>
+}]
+}
+
+});
+
 </script>
+
 </body>
 </html>
