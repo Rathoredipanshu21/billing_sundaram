@@ -33,7 +33,7 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
                 <i class="fa-solid fa-list-check text-amber-500"></i>
                 <span>Settled Bills & History</span>
             </h2>
-            <p class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-medium">Review past transactions and generate reprints</p>
+            <p class="text-xs text-gray-500 uppercase tracking-wider mt-1 font-medium">Review past transactions and edit or reprint invoices</p>
         </div>
         
         <div class="flex items-center gap-3">
@@ -68,7 +68,7 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
                 <tbody class="divide-y divide-gray-100 text-sm text-neutral-700">
                     <?php if ($invoiceResult && $invoiceResult->num_rows > 0): ?>
                         <?php while($row = $invoiceResult->fetch_assoc()): ?>
-                            <tr class="hover:bg-gray-50/50 transition">
+                            <tr class="hover:bg-gray-50/50 transition group">
                                 <td class="px-5 py-4 font-mono text-sm font-semibold text-neutral-800">
                                     <?php echo htmlspecialchars($row['invoice_no']); ?>
                                 </td>
@@ -131,9 +131,15 @@ $invoiceResult = $conn->query("SELECT * FROM invoices ORDER BY id DESC");
                                     ₹<?php echo number_format($row['net_payable'], 2); ?>
                                 </td>
                                 <td class="px-5 py-4 text-center">
-                                    <button onclick="window.open('print_invoice.php?id=<?php echo $row['id']; ?>', '_blank')" class="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#EBBB15] hover:border-[#EBBB15] hover:bg-[#FFFDF5] transition flex items-center justify-center mx-auto shadow-sm" title="Print Receipt">
-                                        <i class="fa-solid fa-print text-sm"></i>
-                                    </button>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button onclick="window.open('print_invoice.php?id=<?php echo $row['id']; ?>', '_blank')" class="w-9 h-9 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-[#EBBB15] hover:border-[#EBBB15] hover:bg-[#FFFDF5] transition flex items-center justify-center shadow-sm" title="Print Receipt">
+                                            <i class="fa-solid fa-print text-sm"></i>
+                                        </button>
+                                        
+                                        <button onclick="window.location.href='edit_invoice.php?id=<?php echo $row['id']; ?>'" class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 text-blue-500 hover:text-white hover:border-blue-600 hover:bg-blue-600 transition flex items-center justify-center shadow-sm" title="Edit Invoice">
+                                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endwhile; ?>

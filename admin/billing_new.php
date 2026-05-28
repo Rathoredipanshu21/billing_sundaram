@@ -66,6 +66,7 @@ if (isset($_GET['ajax_search_member'])) {
     header('Content-Type: application/json');
     $search = '%' . $_GET['ajax_search_member'] . '%';
     
+    // Find active membership matching Code, Name, or Mobile
     $stmt = $conn->prepare("
         SELECT cs.*, s.plan_name, s.discount_percent, s.service_benefits as plan_benefits 
         FROM client_subscriptions cs 
@@ -74,13 +75,14 @@ if (isset($_GET['ajax_search_member'])) {
         AND cs.status = 'Active' AND cs.end_date >= CURDATE() 
         LIMIT 1
     ");
-    $stmt->bind_param("sss", $search, $search);
+    $stmt->bind_param("sss", $search, $search, $search);
     $stmt->execute();
     $res = $stmt->get_result();
     
     if ($res->num_rows > 0) {
         $member = $res->fetch_assoc();
         
+        // Lazy load: If remaining_benefits is NULL, sync it from the master plan
         if (empty($member['remaining_benefits'])) {
             $member['remaining_benefits'] = $member['plan_benefits'];
             $update = $conn->prepare("UPDATE client_subscriptions SET remaining_benefits = ? WHERE id = ?");
@@ -88,6 +90,7 @@ if (isset($_GET['ajax_search_member'])) {
             $update->execute();
         }
         
+        // Decode benefits to fetch actual service names for the UI
         $benefits_list = [];
         $benefits_arr = json_decode($member['remaining_benefits'], true);
         if (is_array($benefits_arr)) {
@@ -106,6 +109,7 @@ if (isset($_GET['ajax_search_member'])) {
         $member['parsed_benefits'] = $benefits_list;
         $member['valid_until'] = date('d M Y', strtotime($member['end_date']));
 
+        // Fetch Recent Invoice History for this specific mobile number
         $histStmt = $conn->prepare("SELECT invoice_no, net_payable, created_at FROM invoices WHERE customer_mobile = ? ORDER BY id DESC LIMIT 5");
         $histStmt->bind_param("s", $member['client_contact']);
         $histStmt->execute();
@@ -330,6 +334,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="../Assets/icon.png">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
     <style>
@@ -449,7 +454,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                 </div>
             </div>
 
-            <form method="POST" class="h-full flex flex-col flex-1 overflow-hidden" id="billingForm">
+            <form method="POST" class="h-full flex flex-col flex-1 overflow-hidden min-h-0" id="billingForm">
                 <input type="hidden" name="action" value="generate_invoice">
                 <input type="hidden" name="client_subscription_id" id="clientSubIdInput" value="">
                 
@@ -481,7 +486,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                     </div>
                 </div>
 
-                <div class="flex-1 overflow-y-auto custom-scroll relative bg-white flex flex-col p-2" id="cartContainer">
+                <div class="flex-1 overflow-y-auto custom-scroll relative bg-white flex flex-col p-2 min-h-0" id="cartContainer">
                     <div id="cartTableBody" class="flex flex-col gap-2"></div>
 
                     <div id="emptyCart" class="text-center py-16 text-gray-300 flex-1 flex flex-col justify-center items-center">
@@ -492,9 +497,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                     </div>
                 </div>
 
-                <div class="border-t bg-white shrink-0 shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-10 flex flex-col relative">
+                <div class="border-t bg-white shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-10 flex flex-col relative shrink-0 max-h-[60%]">
                     
-                    <div class="px-5 py-3 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 border-b transition" onclick="toggleCheckoutPanel()">
+                    <div class="px-5 py-3 bg-gray-50 flex justify-between items-center cursor-pointer hover:bg-gray-100 border-b transition shrink-0" onclick="toggleCheckoutPanel()">
                         <div class="font-bold text-[11px] text-gray-500 uppercase tracking-widest flex items-center gap-2">
                             <i class="fa-solid fa-chevron-down transition-transform duration-300" id="checkoutToggleIcon"></i>
                             Bill Summary & Payment
@@ -504,7 +509,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                         </div>
                     </div>
 
-                    <div id="checkoutContent" class="overflow-y-auto custom-scroll max-h-[45vh] bg-white">
+                    <div id="checkoutContent" class="overflow-y-auto custom-scroll bg-white min-h-0 transition-all duration-300">
                         <div class="p-4 border-b border-gray-100">
                             
                             <div class="flex justify-between items-center mb-2 text-[13px]">
@@ -566,7 +571,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                             </div>
                         </div>
 
-                        <div class="p-4 pt-3">
+                        <div class="p-4 pt-3 shrink-0">
                             <div class="grid grid-cols-4 gap-2 mb-1">
                                 <label class="payment-option border rounded-xl py-2.5 text-center text-[12px] font-semibold cursor-pointer bg-gray-50">
                                     <input type="radio" name="payment_mode" value="Cash" checked hidden onchange="toggleSplitPayment()">
@@ -588,7 +593,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['action']) && $_POST['
                         </div>
                     </div>
 
-                    <div class="px-4 pb-5 pt-3 bg-white w-full border-t border-gray-50 z-20">
+                    <div class="px-4 pb-6 pt-3 bg-white w-full border-t border-gray-50 z-20 shrink-0 mt-auto">
                         <button type="submit" id="submitBtn" disabled class="w-full bg-[#111111] hover:bg-black transition text-yellow-500 py-3.5 rounded-xl uppercase tracking-widest text-[13px] font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2">
                             <i class="fa-solid fa-print text-[15px]"></i> Generate Invoice
                         </button>
@@ -868,7 +873,6 @@ function selectExistingCustomer(name, mobile) {
 }
 // ======================================
 
-
 function toggleCheckoutPanel() {
     const content = document.getElementById('checkoutContent');
     const icon = document.getElementById('checkoutToggleIcon');
@@ -1086,7 +1090,7 @@ async function searchMember() {
             pendingMemberData = result.data;
             openMemberModal(result.data);
         } else {
-            alert('No active membership found for this query.');
+            alert('No active membership found for this query. It may be expired or not exist.');
         }
     } catch (e) { console.error("Search failed", e); }
 }

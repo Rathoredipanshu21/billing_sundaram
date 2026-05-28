@@ -49,11 +49,12 @@ while ($row = $items_result->fetch_assoc()) {
 }
 $items_stmt->close();
 
-// Pre-fill WhatsApp message 
+// Pre-fill WhatsApp message (Professional, Bold & Italic)
 $host = $_SERVER['HTTP_HOST'];
 $uri = rtrim(dirname($_SERVER['REQUEST_URI']), '/');
 $invoice_url = "http://" . $host . $uri . "/print_invoice.php?id=" . $invoice['id'];
-$wa_msg = "Hello " . htmlspecialchars($invoice['customer_name']) . ",\n\nThank you for visiting Sundaram Salon, Jaipur! We hope you feel beautiful and completely refreshed.\n\nHere is your invoice for your recent visit:\n$invoice_url\n\nVisit again to redeem your loyalty points!";
+
+$wa_msg = "*_Dear " . htmlspecialchars($invoice['customer_name']) . ",_*\n\n*_Thank you for choosing Sundaram Salon, Jaipur! We hope you had a wonderful and refreshing experience with us._*\n\n*_For your convenience, please find the link to your digital invoice below:_*\n$invoice_url\n\n*_We look forward to serving you again soon. Don't forget to redeem your loyalty points on your next visit!_*";
 $wa_link = "https://wa.me/91" . preg_replace('/[^0-9]/', '', $invoice['customer_mobile']) . "?text=" . rawurlencode($wa_msg);
 ?>
 <!DOCTYPE html>
@@ -63,6 +64,7 @@ $wa_link = "https://wa.me/91" . preg_replace('/[^0-9]/', '', $invoice['customer_
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice - <?php echo $invoice['invoice_no']; ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="../Assets/icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -91,7 +93,7 @@ $wa_link = "https://wa.me/91" . preg_replace('/[^0-9]/', '', $invoice['customer_
             left: 50%;
             transform: translate(-50%, -50%);
             width: 400px;
-            opacity: 0.04;
+            opacity: 0.15; /* Increased opacity */
             pointer-events: none;
             z-index: 0;
         }
@@ -107,9 +109,7 @@ $wa_link = "https://wa.me/91" . preg_replace('/[^0-9]/', '', $invoice['customer_
         }
     </style>
 </head>
-<body onload="setTimeout(() => { window.print(); }, 800);">
-
-    <div class="no-print bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+<body> <div class="no-print bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
         <a href="billing_new.php" class="text-sm font-medium text-gray-500 hover:text-neutral-900 transition flex items-center gap-2">
             <i class="fa-solid fa-arrow-left"></i> Back to POS Counter
         </a>

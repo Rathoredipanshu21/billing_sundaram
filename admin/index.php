@@ -396,8 +396,12 @@ if (!isset($_SESSION['admin'])) {
                         <i class="fa-solid fa-plus w-4 mr-2"></i>New Invoice
                     </a>
 
+                    <!-- <a href="edit_invoice.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
+                        <i class="fa-solid fa-pen-check w-4 mr-2"></i>Edit Invoice
+                    </a> -->
+
                     <a href="billing_history.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
-                        <i class="fa-solid fa-list-check w-4 mr-2"></i>Settled Bills
+                        <i class="fa-solid fa-list-check w-4 mr-2"></i>Edit Invoice
                     </a>
                 </div>
             </div>
@@ -486,6 +490,10 @@ if (!isset($_SESSION['admin'])) {
             <a href="expenses.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
                 <i class="fa-solid fa-wallet w-5"></i>
                 <span class="sidebar-brand-text ml-1">Expenses</span>
+            </a>
+            <a href="manage_manager.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
+                <i class="fa-solid fa-wallet w-5"></i>
+                <span class="sidebar-brand-text ml-1">Manage Manager</span>
             </a>
 
             <a href="customers.php" target="content-frame" class="nav-link" onclick="handleNavigation(this)">
